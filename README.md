@@ -36,11 +36,11 @@ FPGA実験
    - mode
    関数
    - set_speed()
-    - A,B,Cの三択
-    - A < B < Cの順に早い
+     - A,B,Cの三択
+     - A < B < Cの順に早い
    - set_mode()
-    - 1, 2
-     - 1: single mode
-     - 2: vs mode
+     - 1, 2
+       - 1: single mode
+       - 2: vs mode
    - Eぼたんで、1をreturn
  - 
