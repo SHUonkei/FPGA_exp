@@ -2,7 +2,7 @@
 #include "crt0.c"
 #include "ChrFont0.h"
 
-void show_ball(int pos);
+void show_ball(int x, int y);
 void play();
 void start();
 void result();
@@ -29,26 +29,93 @@ void lcd_clear_vbuf();
 #define VS_MODE	0
 #define VS_CPU	1
 
-int state = INIT, pos = 0;
+int state = INIT, x_pos = 0, y_pos = 3;
 int mode = VS_MODE;
 int point1 = 0, point2 = 0;
+static unsigned int seed = 1;
+int x_dir = 1, y_dir = 0; // 初期方向
+int max_delay = 2, min_delay = 50; // 最大・最小の遅延値
+int delay = 20; // 現在の遅延値
+int toggle_speed = 0; // 遅延切り替えフラグ
 
+int rand() {
+    seed = seed * 1103515245 + 12345;
+    return (seed / 65536) % 32768;
+}
+
+void srand(unsigned int s) {
+    seed = s;
+}
 /* interrupt_handler() is called every 100msec */
 void interrupt_handler() {
 	static int cnt;
+    static int delay_cnt = 0;
+
 	if (state == INIT) {
 	} else if (state == OPENING) {
 		cnt = 0;
+        delay = min_delay;
 	} else if (state == MENU) {
 		show_start();
 	} else if (state == PLAY) {
-		/* Display a ball */
-		pos = (cnt < 12) ? cnt : 23 - cnt;
-		show_ball(pos);
-		if (++cnt >= 24) {
-			cnt = 0;
-		}
-	} else if (state == RESULT) {
+        if (++delay_cnt >= delay) {
+            delay_cnt = 0;
+
+            // x_posとy_posを更新
+            x_pos += x_dir;
+            y_pos += y_dir;
+
+            // 左端の場合
+            if (x_pos <= 0) {
+                if (!btn_check_0()) { // ボタンが押されなかった場合
+                    lcd_clear_vbuf();
+                    lcd_puts(2, 1, "P2's point");
+                    point2++;
+                    lcd_sync_vbuf();
+                    delay_ms(3000); // 3秒間表示
+                    x_pos = 0;
+                    y_pos = 3;
+                } else {
+                    led_blink();
+                }
+                x_dir = 1; // 右方向に移動
+                y_dir = (rand() % 3) - 1; // -1, 0, 1のランダム値
+                toggle_speed = !toggle_speed;
+                delay = toggle_speed ? max_delay : min_delay;
+            }
+            // 右端の場合
+            else if (x_pos >= 11) {
+                if (!btn_check_3()) { // ボタンが押されなかった場合
+                    lcd_clear_vbuf();
+                    lcd_puts(2, 1, "P1's point");
+                    point1++;
+                    lcd_sync_vbuf();
+                    delay_ms(3000); // 3秒間表示
+                    x_pos = 11;
+                    y_pos = 3;
+                } else {
+                    led_blink();
+                }
+                x_dir = -1; // 左方向に移動
+                y_dir = (rand() % 3) - 1; // -1, 0, 1のランダム値
+                toggle_speed = !toggle_speed;
+                delay = toggle_speed ? max_delay : min_delay;
+            }
+            // 上端の場合
+            else if (y_pos <= 0) {
+                y_pos = 0; // 上端で固定
+                y_dir = 1; // 下方向に移動
+            }
+            // 下端の場合
+            else if (y_pos >= 6) {
+                y_pos = 6; // 下端で固定
+                y_dir = -1; // 上方向に移動
+            }
+
+            // ボールの表示
+            show_ball(x_pos, y_pos);
+        }
+    } else if (state == RESULT) {
 		show_result();
 	} else if (state == ENDING) {
 	}
@@ -89,6 +156,8 @@ void show_result() {
 }
 
 void main() {
+    srand(42);
+
 	while (1) {
 		if (state == INIT) {
 			lcd_init();
@@ -138,13 +207,11 @@ void play() {
 	point2 = 0;		
 	while (1) {
 		/* Button0 is pushed when the ball is in the left edge */
-		if (pos == 0 && btn_check_0() ) {
+		if (x_pos == 0 && btn_check_0() ) {
 			led_blink();	/* Blink LEDs when hit */
-			point1++;
 		/* Button3 is pushed when the ball is in the right edge */
-		} else if (pos == 11 && btn_check_3()) {
+		} else if (x_pos == 11 && btn_check_3()) {
 			led_blink();	/* Blink LEDs when hit */
-			point2++;
 		} else if (btn_check_1()) {
 			state = RESULT;
 			break;		/* Stop the game */
@@ -152,9 +219,9 @@ void play() {
 
 	}
 }
-void show_ball(int pos) {
+void show_ball(int x, int y) {
 	lcd_clear_vbuf();
-	lcd_putc(3, pos, '*');
+    lcd_putc(y, x, '*');
 	lcd_putc(7, 0, '0' + point1);
 	lcd_putc(7, 11, '0' + point2);                                                     
 }
@@ -187,6 +254,11 @@ void led_set(int data) {
 	volatile int *led_ptr = (int *)0xff08;
 	*led_ptr = data;
 }
+
+void delay_ms(int ms) {
+    for (int i = 0; i < ms * 3000; i++);
+}
+
 void led_blink() {
 	led_set(0xf);				/* Turn on */
 	for (int i = 0; i < 300000; i++);	/* Wait */
