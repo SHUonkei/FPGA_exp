@@ -2,7 +2,7 @@
 #include "crt0.c"
 #include "ChrFont0.h"
 
-void show_ball(int x, int y);
+void show_ball_and_racket(int x, int y);
 void play();
 void start();
 void result();
@@ -121,7 +121,7 @@ void interrupt_handler()
 	{
 		show_start();
 	}
-	else if (state == PLAY)
+	else if (state == PLAY && mode == VS_MODE)
 	{
 			delay_cnt = 0;
 
@@ -210,27 +210,96 @@ void interrupt_handler()
 		if (kypd_scan() == 0x1)
 		{
 				racket1--;
-				show_ball(x_pos, y_pos);
+				show_ball_and_racket(x_pos, y_pos);
 		}
 		else if (kypd_scan() == 0x0)
 		{
 				racket1++;
-				show_ball(x_pos, y_pos);
+				show_ball_and_racket(x_pos, y_pos);
 		}
 		
 		if (kypd_scan() == 0xa)
 		{
 				racket2--;
-				show_ball(x_pos, y_pos);
+				show_ball_and_racket(x_pos, y_pos);
 		}
 		else if (kypd_scan() == 0xd)
 		{
 				racket2++;
-				show_ball(x_pos, y_pos);
+				show_ball_and_racket(x_pos, y_pos);
 		}
 
 			// ボールの表示
-			show_ball(x_pos, y_pos);
+			show_ball_and_racket(x_pos, y_pos);
+	} else if (state == PLAY && mode == VS_CPU) {
+		delay_cnt = 0;
+
+		// x_posとy_posを更新
+		x_pos += x_dir;
+		y_pos += y_dir;
+
+		// 左端の場合
+		if (x_pos <= 0)
+		{
+			if ((kypd_scan() != 0x7 && kypd_scan() != 0x4) || point1 > y_pos || y_pos < point1 + 2)
+			{ // ボタンが押されなかった場合
+				lcd_clear_vbuf();
+				lcd_puts(2, 1, "CPU's point");
+				point2++;
+				lcd_sync_vbuf();
+				delay_ms(3000); // 3秒間表示
+				x_pos = 0;
+				y_pos = 3;
+			}
+			else if (kypd_scan() == 0x7 && point1 <= y_pos <= point1 + 2)
+			{
+				led_blink();
+			}
+			else if (kypd_scan() == 0x4 && point1 <= y_pos <= point1 + 2)
+			{
+				led_blink();
+			}
+			x_dir = 1;				  // 右方向に移動
+			y_dir = (rand() % 3) - 1; // -1, 0, 1のランダム値
+		}
+		// 右端の場合
+		else if (x_pos >= 11)
+		{	
+			if (point2 <= y_pos && y_pos <= point2 + 2)
+			{
+				led_blink();
+			}			
+			x_dir = -1;				  // 左方向に移動
+			y_dir = (rand() % 3) - 1; // -1, 0, 1のランダム値
+		}
+		// 上端の場合
+		else if (y_pos <= 0)
+		{
+			y_pos = 0; // 上端で固定
+			y_dir = 1; // 下方向に移動
+		}
+		// 下端の場合
+		else if (y_pos >= 6)
+		{
+			y_pos = 6;	// 下端で固定
+			y_dir = -1; // 上方向に移動
+		}
+
+		if (kypd_scan() == 0x1)
+		{
+				racket1--;
+				show_ball_and_racket(x_pos, y_pos);
+		}
+		else if (kypd_scan() == 0x0)
+		{
+				racket1++;
+				show_ball_and_racket(x_pos, y_pos);
+		}
+		
+		
+
+			// ボールの表示
+		show_ball_and_racket(x_pos, y_pos);
 	}
 	else if (state == RESULT)
 	{
@@ -258,7 +327,7 @@ void show_start()
 		lcd_puts(4, 0, "2vsmode");
 		lcd_puts(5, 0, "cpumode  <<");
 	}
-	lcd_puts(6, 0, "Go:Push1");
+	lcd_puts(6, 0, "Go:Push2");
 	lcd_sync_vbuf();
 }
 
@@ -404,7 +473,7 @@ void play()
 		}
 	}
 }
-void show_ball(int x, int y)
+void show_ball_and_racket(int x, int y)
 {
 	lcd_clear_vbuf();
 	lcd_putc(y, x, '*');
@@ -413,9 +482,11 @@ void show_ball(int x, int y)
 	lcd_putc(racket1, 0, 'O');
 	lcd_putc(racket1 + 1, 0, '|');
 	lcd_putc(racket1 + 2, 0, '|');
-	lcd_putc(racket2, 11, 'O');
-	lcd_putc(racket2 + 1, 11, '|');
-	lcd_putc(racket2 + 2, 11, '|');
+	if (mode == VS_MODE) {
+		lcd_putc(racket2, 11, 'O');
+		lcd_putc(racket2 + 1, 11, '|');
+		lcd_putc(racket2 + 2, 11, '|');
+	}
 }
 
 /*
