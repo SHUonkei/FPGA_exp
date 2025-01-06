@@ -18,6 +18,9 @@ void lcd_init();
 void lcd_putc(int y, int x, int c);
 void lcd_sync_vbuf();
 void lcd_clear_vbuf();
+void play_buzzer_high();
+void play_buzzer_low();
+void stop_buzzer();
 
 #define INIT 0
 #define OPENING 1
@@ -131,6 +134,7 @@ void interrupt_handler()
 			{
 				if ((kypd_scan() != 0x7 && kypd_scan() != 0x4) || point1 > y_pos || y_pos < point1 + 2)
 				{ // ボタンが押されなかった場合
+					play_buzzer_high();
 					lcd_clear_vbuf();
 					lcd_puts(2, 1, "P2's point");
 					point2++;
@@ -138,19 +142,21 @@ void interrupt_handler()
 					delay_ms(3000); // 3秒間表示
 					x_pos = 0;
 					y_pos = 3;
+					stop_buzzer();
 				}
 				else if (kypd_scan() == 0x7 && point1 <= y_pos <= point1 + 2)
 				{
+					play_buzzer_low();
 					led_blink();
+					stop_buzzer();
 				}
 				else if (kypd_scan() == 0x4 && point1 <= y_pos <= point1 + 2)
 				{
+					play_buzzer_low();
 					led_blink();
+					stop_buzzer();
 				}
-				else if (kypd_scan() == 0x4)
-				{
-					led_blink();
-				}
+
 				x_dir = 1;				  // 右方向に移動
 				y_dir = (rand() % 3) - 1; // -1, 0, 1のランダム値
 				toggle_speed = !toggle_speed;
@@ -161,6 +167,7 @@ void interrupt_handler()
 			{
 				if ((kypd_scan() != 0xB && kypd_scan() != 0xC) || point2 > y_pos || y_pos < point2 + 2)
 				{ // ボタンが押されなかった場合
+					play_buzzer_high();
 					lcd_clear_vbuf();
 					lcd_puts(2, 1, "P1's point");
 					point1++;
@@ -168,14 +175,19 @@ void interrupt_handler()
 					delay_ms(3000); // 3秒間表示
 					x_pos = 11;
 					y_pos = 3;
+					stop_buzzer();
 				}
 				else if (kypd_scan() == 0xB && point2 <= y_pos && y_pos <= point2 + 2)
 				{
+					play_buzzer_low();
 					led_blink();
+					stop_buzzer();
 				}
 				else if (kypd_scan() == 0xC && point2 <= y_pos && y_pos <= point2 + 2)
 				{
+					play_buzzer_low();
 					led_blink();
+					stop_buzzer();
 				}
 				x_dir = -1;				  // 左方向に移動
 				y_dir = (rand() % 3) - 1; // -1, 0, 1のランダム値
@@ -558,4 +570,17 @@ void lcd_puts(int y, int x, char *str)
 			break;
 		else
 			lcd_putc(y, i, str[i]);
+}
+
+void play_buzzer_high() {
+	volatile int *buzzer_ptr = (int *)0xff18;
+	*buzzer_ptr = 1;
+}
+void play_buzzer_low() {
+	volatile int *buzzer_ptr = (int *)0xff18;
+	*buzzer_ptr = 13;
+}
+void stop_buzzer() {
+	volatile int *buzzer_ptr = (int *)0xff18;
+	*buzzer_ptr = 0;
 }
