@@ -16,11 +16,13 @@ void led_set(int data);
 void led_blink();
 void lcd_init();
 void lcd_putc(int y, int x, int c);
+void lcd_puts(int y, int x, char *str);
 void lcd_sync_vbuf();
 void lcd_clear_vbuf();
 void play_buzzer_high();
 void play_buzzer_low();
 void stop_buzzer();
+void delay_ms(int ms);
 
 #define INIT 0
 #define OPENING 1
