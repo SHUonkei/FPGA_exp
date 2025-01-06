@@ -16,11 +16,17 @@ void led_set(int data);
 void led_blink();
 void lcd_init();
 void lcd_putc(int y, int x, int c);
+void lcd_puts(int y, int x, char *s);
 void lcd_sync_vbuf();
 void lcd_clear_vbuf();
 void play_buzzer_high();
 void play_buzzer_low();
 void stop_buzzer();
+void lcd_clear();
+void lcd_sync();
+void delay_ms(int ms);
+void delay_us(int us);
+
 
 #define INIT 0
 #define OPENING 1
@@ -37,11 +43,14 @@ int mode = VS_MODE;
 int point1 = 0, point2 = 0;
 static unsigned int seed = 1;
 int x_dir = 1, y_dir = 0;		   // 初期方向
-int max_delay = 2, min_delay = 50; // 最大・最小の遅延値
-int delay = 20;					   // 現在の遅延値
-int toggle_speed = 0;			   // 遅延切り替えフラグ
+int max_delay = 0, min_delay = 3; // 最大・最小の遅延値
+int delay;					   // 現在の遅延値
+int toggle_speed;			   // 遅延切り替えフラグ
 int racket1 = 3;
 int racket2 = 3;
+int cnt;
+int delay_cnt;
+int global_timer;
 
 int kypd_scan()
 {
@@ -106,8 +115,7 @@ void srand(unsigned int s)
 /* interrupt_handler() is called every 100msec */
 void interrupt_handler()
 {
-	static int cnt;
-	static int delay_cnt = 0;
+	volatile int *seg7_ptr = (int *)0xff10;
 
 	if (state == INIT)
 	{
@@ -123,8 +131,22 @@ void interrupt_handler()
 	}
 	else if (state == PLAY && mode == VS_MODE)
 	{
+			delay_cnt++;
+			if (delay_cnt >= delay) {
 			delay_cnt = 0;
-
+			// *seg7_ptr = cnt;
+			global_timer++;
+			if (global_timer % 5 == 0) {
+				cnt++;
+				// 7セグ表示に書き込み
+				*seg7_ptr = cnt;
+			}
+			if (global_timer == 30*5)
+			{
+				cnt = 0;
+				global_timer = 0;
+				state = RESULT;
+			}
 			// x_posとy_posを更新
 			x_pos += x_dir;
 			y_pos += y_dir;
@@ -136,7 +158,7 @@ void interrupt_handler()
 				{ // ボタンが押されなかった場合
 					play_buzzer_high();
 					lcd_clear_vbuf();
-					lcd_puts(3, 0, "P2's point");
+					lcd_puts(2, 1, "P2's point");
 					point2++;
 					lcd_sync_vbuf();
 					delay_ms(3000); // 3秒間表示
@@ -148,19 +170,19 @@ void interrupt_handler()
 				{
 					play_buzzer_low();
 					led_blink();
+					delay = max_delay;
 					stop_buzzer();
 				}
 				else if (kypd_scan() == 0x4 && point1 <= y_pos <= point1 + 2)
 				{
 					play_buzzer_low();
 					led_blink();
+					delay = min_delay;
 					stop_buzzer();
 				}
 
 				x_dir = 1;				  // 右方向に移動
 				y_dir = (rand() % 3) - 1; // -1, 0, 1のランダム値
-				toggle_speed = !toggle_speed;
-				delay = toggle_speed ? max_delay : min_delay;
 			}
 			// 右端の場合
 			else if (x_pos >= 11)
@@ -169,7 +191,7 @@ void interrupt_handler()
 				{ // ボタンが押されなかった場合
 					play_buzzer_high();
 					lcd_clear_vbuf();
-					lcd_puts(3, 0, "P1's point");
+					lcd_puts(2, 1, "P1's point");
 					point1++;
 					lcd_sync_vbuf();
 					delay_ms(3000); // 3秒間表示
@@ -181,18 +203,18 @@ void interrupt_handler()
 				{
 					play_buzzer_low();
 					led_blink();
+					delay = max_delay;
 					stop_buzzer();
 				}
 				else if (kypd_scan() == 0xC && point2 <= y_pos && y_pos <= point2 + 2)
 				{
 					play_buzzer_low();
 					led_blink();
+					delay = min_delay;
 					stop_buzzer();
 				}
 				x_dir = -1;				  // 左方向に移動
 				y_dir = (rand() % 3) - 1; // -1, 0, 1のランダム値
-				toggle_speed = !toggle_speed;
-				delay = toggle_speed ? max_delay : min_delay;
 			}
 			// 上端の場合
 			else if (y_pos <= 0)
@@ -205,6 +227,7 @@ void interrupt_handler()
 			{
 				y_pos = 6;	// 下端で固定
 				y_dir = -1; // 上方向に移動
+			}
 			}
 
 		if (kypd_scan() == 0x1)
@@ -233,6 +256,16 @@ void interrupt_handler()
 			show_ball_and_racket(x_pos, y_pos);
 	} else if (state == PLAY && mode == VS_CPU) {
 		delay_cnt = 0;
+		global_timer++;
+		if (global_timer % 5 == 0) {
+				cnt++;
+				*seg7_ptr = cnt;
+			}
+		if (global_timer == 30*5) {
+			cnt = 0;
+			global_timer = 0;
+			state = RESULT;
+		}
 
 		// x_posとy_posを更新
 		x_pos += x_dir;
@@ -244,7 +277,8 @@ void interrupt_handler()
 			if ((kypd_scan() != 0x7 && kypd_scan() != 0x4) || point1 > y_pos || y_pos < point1 + 2)
 			{ // ボタンが押されなかった場合
 				lcd_clear_vbuf();
-				lcd_puts(3, 0, "CPU's point");
+				lcd_puts(2, 1, "CPU's point");
+				play_buzzer_high();
 				point2++;
 				lcd_sync_vbuf();
 				delay_ms(3000); // 3秒間表示
@@ -253,10 +287,12 @@ void interrupt_handler()
 			}
 			else if (kypd_scan() == 0x7 && point1 <= y_pos <= point1 + 2)
 			{
+				play_buzzer_low();
 				led_blink();
 			}
 			else if (kypd_scan() == 0x4 && point1 <= y_pos <= point1 + 2)
 			{
+				play_buzzer_low();
 				led_blink();
 			}
 			x_dir = 1;				  // 右方向に移動
@@ -267,6 +303,7 @@ void interrupt_handler()
 		{	
 			if (point2 <= y_pos && y_pos <= point2 + 2)
 			{
+				play_buzzer_low();
 				led_blink();
 			}			
 			x_dir = -1;				  // 左方向に移動
@@ -303,6 +340,7 @@ void interrupt_handler()
 	}
 	else if (state == RESULT)
 	{
+
 		show_result();
 	}
 	else if (state == ENDING)
@@ -345,7 +383,7 @@ void show_result()
 		lcd_puts(6, 0, "1P Wins!");
 	else
 		lcd_puts(6, 0, "2P Wins!");
-	lcd_puts(7, 1, "Re:  Push1");
+	lcd_puts(7, 1, " Re:  Push1");
 	lcd_sync_vbuf();
 }
 
@@ -361,12 +399,14 @@ void main()
 	seed = 1;
 	x_dir = 1;
 	y_dir = 0;
-	max_delay = 2;
-	min_delay = 50;
-	delay = 20;
+	max_delay = 0;
+	min_delay = 3;
 	toggle_speed = 0;
 	racket1 = 3;
 	racket2 = 3;
+	cnt = 0;
+	delay_cnt = 0;
+	global_timer = 0;
 
 	while (1)
 	{
@@ -438,11 +478,9 @@ void play()
 {
 	point1 = 0;
 	point2 = 0;
-	volatile int *seg7_ptr = (int *)0xff10;
 
 	while (1)
 	{
-		*seg7_ptr = kypd_scan();
 		// /* Button0 is pushed when the ball is in the left edge */
 		if (point1 == 5 || point2 == 5)
 		{
