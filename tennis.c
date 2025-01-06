@@ -136,7 +136,7 @@ void interrupt_handler()
 				{ // ボタンが押されなかった場合
 					play_buzzer_high();
 					lcd_clear_vbuf();
-					lcd_puts(2, 1, "P2's point");
+					lcd_puts(3, 0, "P2's point");
 					point2++;
 					lcd_sync_vbuf();
 					delay_ms(3000); // 3秒間表示
@@ -169,7 +169,7 @@ void interrupt_handler()
 				{ // ボタンが押されなかった場合
 					play_buzzer_high();
 					lcd_clear_vbuf();
-					lcd_puts(2, 1, "P1's point");
+					lcd_puts(3, 0, "P1's point");
 					point1++;
 					lcd_sync_vbuf();
 					delay_ms(3000); // 3秒間表示
@@ -244,7 +244,7 @@ void interrupt_handler()
 			if ((kypd_scan() != 0x7 && kypd_scan() != 0x4) || point1 > y_pos || y_pos < point1 + 2)
 			{ // ボタンが押されなかった場合
 				lcd_clear_vbuf();
-				lcd_puts(2, 1, "CPU's point");
+				lcd_puts(3, 0, "CPU's point");
 				point2++;
 				lcd_sync_vbuf();
 				delay_ms(3000); // 3秒間表示
