@@ -39,7 +39,7 @@ int mode = VS_MODE;
 int point1 = 0, point2 = 0;
 static unsigned int seed = 1;
 int x_dir = 1, y_dir = 0;		   // 初期方向
-int max_delay = 0, min_delay = 4; // 最大・最小の遅延値
+int max_delay = 0, min_delay = 3; // 最大・最小の遅延値
 int delay;					   // 現在の遅延値
 int racket1 = 3;
 int racket2 = 3;
@@ -375,7 +375,7 @@ void main()
 	x_dir = 1;
 	y_dir = 0;
 	max_delay = 0;
-	min_delay = 6;
+	min_delay = 3;
 	racket1 = 3;
 	racket2 = 3;
 
