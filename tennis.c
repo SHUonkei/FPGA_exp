@@ -470,9 +470,11 @@ void show_ball_and_racket(int x, int y)
 	lcd_putc(racket1, 0, 'O');
 	lcd_putc(racket1 + 1, 0, '|');
 	lcd_putc(racket1 + 2, 0, '|');
-	lcd_putc(racket2, 11, 'O');
-	lcd_putc(racket2 + 1, 11, '|');
-	lcd_putc(racket2 + 2, 11, '|');
+	if (mode == VS_MODE) {
+		lcd_putc(racket2, 11, 'O');
+		lcd_putc(racket2 + 1, 11, '|');
+		lcd_putc(racket2 + 2, 11, '|');
+	}
 }
 
 /*
