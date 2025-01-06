@@ -44,6 +44,8 @@ int delay = 20;					   // 現在の遅延値
 int toggle_speed = 0;			   // 遅延切り替えフラグ
 int racket1 = 3;
 int racket2 = 3;
+static int cnt = 30 * 5;
+volatile int *seg7_ptr = (int *)0xff10;
 
 int kypd_scan()
 {
@@ -108,8 +110,6 @@ void srand(unsigned int s)
 /* interrupt_handler() is called every 100msec */
 void interrupt_handler()
 {
-	static int cnt = 30 * 5;
-	volatile int *seg7_ptr = (int *)0xff10;
 	if (cnt == 0)
 		state = RESULT;
 	if (state == PLAY) {
