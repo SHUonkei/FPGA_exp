@@ -108,6 +108,13 @@ void interrupt_handler()
 {
 	static int cnt = 30 * 5;
 	volatile int *seg7_ptr = (int *)0xff10;
+	if (cnt == 0)
+		state = RESULT;
+	if (state == PLAY) {
+		cnt--;
+		if (cnt % 5 == 0)
+			*seg7_ptr = cnt / 5;
+	}
 	static int delay_cnt = 0;
 
 	if (state == INIT)
@@ -124,13 +131,6 @@ void interrupt_handler()
 	}
 	else if (state == PLAY && mode == VS_MODE)
 	{
-			cnt--;
-			if (cnt % 5 == 0)
-				*seg7_ptr = cnt / 5;
-			if (cnt == 0)
-				state = RESULT;
-			delay_cnt = 0;
-
 			// x_posとy_posを更新
 			x_pos += x_dir;
 			y_pos += y_dir;
@@ -238,11 +238,6 @@ void interrupt_handler()
 			// ボールの表示
 			show_ball_and_racket(x_pos, y_pos);
 	} else if (state == PLAY && mode == VS_CPU) {
-		cnt--;
-		if (cnt % 5 == 0)
-			*seg7_ptr = cnt / 5;
-		if (cnt == 0)
-			state = RESULT;
 
 		delay_cnt = 0;
 
