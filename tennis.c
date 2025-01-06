@@ -106,7 +106,8 @@ void srand(unsigned int s)
 /* interrupt_handler() is called every 100msec */
 void interrupt_handler()
 {
-	static int cnt;
+	static int cnt = 30 * 5;
+	volatile int *seg7_ptr = (int *)0xff10;
 	static int delay_cnt = 0;
 
 	if (state == INIT)
@@ -123,6 +124,11 @@ void interrupt_handler()
 	}
 	else if (state == PLAY && mode == VS_MODE)
 	{
+			cnt--;
+			if (cnt % 5 == 0)
+				*seg7_ptr = cnt / 5;
+			if (cnt == 0)
+				state = RESULT;
 			delay_cnt = 0;
 
 			// x_posとy_posを更新
@@ -232,6 +238,12 @@ void interrupt_handler()
 			// ボールの表示
 			show_ball_and_racket(x_pos, y_pos);
 	} else if (state == PLAY && mode == VS_CPU) {
+		cnt--;
+		if (cnt % 5 == 0)
+			*seg7_ptr = cnt / 5;
+		if (cnt == 0)
+			state = RESULT;
+
 		delay_cnt = 0;
 
 		// x_posとy_posを更新
@@ -438,11 +450,9 @@ void play()
 {
 	point1 = 0;
 	point2 = 0;
-	volatile int *seg7_ptr = (int *)0xff10;
 
 	while (1)
 	{
-		*seg7_ptr = kypd_scan();
 		// /* Button0 is pushed when the ball is in the left edge */
 		if (point1 == 5 || point2 == 5)
 		{
