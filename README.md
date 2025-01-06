@@ -1,5 +1,7 @@
 # FPGA Game Implementation Documentation
 
+https://docs.google.com/presentation/d/1Fm-aW6LySb85-OVWuw7F2cc8d-SknJxWeHCY9gs2y9A/edit#slide=id.p
+
 ## 概要
 本ドキュメントはFPGA上で動作するゲームの仕様と実装について説明します。以下の機能を実装します:
 
